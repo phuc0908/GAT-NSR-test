@@ -28,8 +28,10 @@ graph TD
         IE & GAT_I --> I_Fusion[Item Latent Vector]
     end
 
-    subgraph "Prediction Layer"
-        U_Fusion & I_Fusion --> MLP[Neural Network]
+    subgraph "Prediction Layer (NCF)"
+        U_Fusion & I_Fusion --> Concat[Concatenation]
+        U_Fusion & I_Fusion --> Product[Element-wise Product]
+        Concat & Product --> MLP[MLP 3 Layers]
         MLP --> Score((Dự Đoán Rating))
     end
 ```
@@ -121,6 +123,43 @@ final_user_vector = torch.relu(self.user_fusion(u_cat))
 
 ---
 
+### D. Neural Collaborative Filtering (NCF)
+
+NCF kết hợp 2 cách để nắm bắt tương tác User-Item:
+
+#### Sơ đồ NCF Layer:
+
+```mermaid
+graph LR
+    U[User Vector<br/>64 chiều] --> C[Concatenate]
+    I[Item Vector<br/>64 chiều] --> C
+    
+    U --> P["⊙ Product<br/>(nhân từng phần tử)"]
+    I --> P
+    
+    C --> Cat["[h_u || h_i]<br/>128 chiều"]
+    P --> Prod["[h_u ⊙ h_i]<br/>64 chiều"]
+    
+    Cat --> Final[Ghép: 192 chiều]
+    Prod --> Final
+    
+    Final --> MLP["MLP<br/>192→128→64→32→1"]
+    MLP --> R((Rating))
+```
+
+#### Công thức:
+```
+Input = [h_u || h_i || (h_u ⊙ h_i)]
+Prediction = MLP(Input)
+```
+
+**Ý nghĩa:**
+- `Concatenation`: Học mối quan hệ phức tạp
+- `Element-wise Product`: Nắm bắt tương tác trực tiếp (h_u[i] × h_i[i])
+- Kết hợp cả 2 → Model mạnh hơn!
+
+---
+
 ## 3. Ví dụ Minh Họa
 
 Giả sử hệ thống đang dự đoán cho **User Tùng**:
@@ -141,18 +180,12 @@ Giả sử hệ thống đang dự đoán cho **User Tùng**:
     *   Hệ thống tạo ra một dãy số `[-0.5, 0.2, 0.9...]` đại diện cho Tùng (Latent Vector).
     *   Dùng dãy số này để so với các phim khác và đưa ra gợi ý.
 
-## 4. Ý Nghĩa Của Các Con Số Trong Latent Vector
 
-Bạn thắc mắc `[-0.5, 0.2, 0.9]` nghĩa là gì?
 
-Thực tế, **Máy tính tự định nghĩa ý nghĩa của từng số này** trong quá trình học (Black Box), nhưng ta có thể tưởng tượng như sau:
 
-*   **Số thứ 1 (-0.5)**: Có thể là trục *"Hài hước <-> Nghiêm túc"*.
-    *   Giá trị âm (-0.5) => Tùng thích phim hơi nghiêm túc.
-*   **Số thứ 2 (0.2)**: Có thể là trục *"Hoạt hình <-> Người đóng"*.
-    *   Giá trị dương nhỏ (0.2) => Hơi thích phim người đóng hơn chút xíu.
-*   **Số thứ 3 (0.9)**: Có thể là trục *"Ngắn tập <-> Dài tập"*.
-    *   Giá trị dương lớn (0.9) => Rất thích phim dài tập (Drama).
 
-**Lưu ý**: Đây là ví dụ. Trong Depp Learning, các đặc điểm này rất "trừu tượng" (Latent/Hidden Features) và pha trộn lẫn nhau, con người không thể đọc hiểu trực tiếp từng số, nhưng máy tính dùng nó để tính toán độ khớp cực kỳ chính xác.
+**Link**:
+- [Dataset](https://www.kaggle.com/datasets/rounakbanik/social-network-based-recommendation-system)
+
+- [Trust](https://www.cse.msu.edu/~tangjili/trust.html)
 

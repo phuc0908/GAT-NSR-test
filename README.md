@@ -4,7 +4,7 @@
 1.  **Lịch sử xem phim**: Người dùng đã xem và chấm điểm phim nào.
 2.  **Mạng xã hội**: Người dùng tin tưởng ai (bạn bè), có gu giống ai.
 
-## 📂 Cấu Trúc Thư Mục
+## Cấu Trúc Thư Mục
 
 - **`train.py`**: File dùng để dạy (huấn luyện) AI. Chạy file này đầu tiên để tạo ra "bộ não" (`gat_nsr_model.pth`).
 - **`app.py`**: Server chạy trang web. Nó dùng "bộ não" đã học để gợi ý phim cho người dùng.
@@ -15,7 +15,7 @@
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt & Chạy (Workflow)
+## Hướng Dẫn Cài Đặt & Chạy (Workflow)
 
 Để hệ thống hoạt động, bạn cần làm theo đúng 3 bước sau:
 
@@ -48,7 +48,7 @@ python app.py
 
 ---
 
-## 🧠 Nguyên Lý Hoạt Động (Giải thích đơn giản)
+## Nguyên Lý Hoạt Động (Giải thích đơn giản)
 
 1.  **Thu Thập (Dataset)**: Hệ thống đọc danh sách "Ai xem phim gì" và "Ai chơi với ai".
 2.  **Quan Sát (GAT Layer)**:
@@ -61,39 +61,4 @@ python app.py
     *   AI lấy **Latent Vector User A** so sánh với **Latent Vector Item X** (phim chưa xem).
     *   Nếu thấy khớp, nó chấm điểm cao => Gợi ý cho bạn.
 
-### ❓ "Latent Vector" là gì?
-Trong máy tính, "Latent Vector" là một **dãy số** (ví dụ: `[0.9, 0.1, ... 0.5]`).
-*   Hãy tưởng tượng mỗi con số đại diện cho một tính cách ngầm:
-    *   Số đầu tiên: Độ thích phim Hành động (0.9 = Rất thích).
-    *   Số thứ hai: Độ thích phim Tình cảm (0.1 = Không thích).
-*   **Vector Xã hội**: Là dãy số đúc kết từ gu của bạn bè bạn.
-*   **Vector Sở thích**: Là dãy số đúc kết từ các phim bạn đã xem.
-=> Gộp lại ta được "Latent Vector" toàn diện của bạn dưới dạng số học.
 
-### 🧮 Latent Vector được tính toán như thế nào?
-
-Quá trình tính ra vector này gồm 3 bước (như trong file `model.py`):
-
-1.  **Bước 1: Khởi tạo (Embedding)**
-    *   Mỗi User và Item ban đầu được gán một vector ngẫu nhiên.
-2.  **Bước 2: Lắng nghe (Attention)**
-    *   **User Vector** = (0.7 x Vector Bạn thân) + (0.3 x Vector Bạn xã giao) ...
-    *   Đồng thời cộng thêm thông tin các phim đã xem + điểm số đã chấm.
-3.  **Bước 3: Tổng hợp (Fusion)**
-    *   `Vector Cuối Cùng = Kết hợp [Vector Xã Hội + Vector Sở Thích]`
-    *   Máy tính dùng hàm toán học (Linear + ReLU) để nén thông tin này lại thành một vector gọn gàng nhất.
-
-
----
-
-## 🛠 Xử Lý Lỗi Thường Gặp
-
-**1. Lỗi "No module named 'torch'"**
-> Bạn chưa cài thư viện. Hãy chạy lại Bước 1.
-
-**2. Lỗi "size mismatch" hoặc "Error loading state_dict"**
-> Code mô hình đã thay đổi nhưng bạn đang dùng file save cũ.
-> **Khắc phục**: Xóa file `gat_nsr_model.pth` đi và chạy lại Bước 2 (`python train.py`).
-
-**3. Web không hiện gợi ý nào?**
-> Có thể User ID bạn nhập không tồn tại trong tập dữ liệu. Hãy thử số nhỏ (1, 2, 3).

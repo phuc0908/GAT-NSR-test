@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import torch
-from dataset import FilmTrustDataset
+from dataset import SocialRecDataset
 from model import GATNSR
 import os
 
 app = Flask(__name__)
 
 # --- Cấu hình ---
-DATA_DIR = 'd:/HOCKY_6/ChuyenDe3_HeKhuyenNghi/code/filmtrust'
-MODEL_PATH = 'gat_nsr_model.pth'
+DATASET_NAME = 'filmtrust' # Cùng tên với dataset bạn đã train
+DATA_DIR = f'd:/HOCKY_6/ChuyenDe3_HeKhuyenNghi/code/{DATASET_NAME}'
+MODEL_PATH = 'gat_nsr_model.pth' # Hoặc 'gat_nsr_model_epinions.pth'
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # --- Biến toàn cục ---
@@ -20,7 +21,7 @@ def load_system():
     
     # 1. Load Dataset (để lấy map ID và dữ liệu đồ thị)
     print("Đang tải dữ liệu...")
-    dataset = FilmTrustDataset(DATA_DIR)
+    dataset = SocialRecDataset(DATA_DIR)
     
     # 2. Khởi tạo Model
     print("Đang khởi tạo Model...")

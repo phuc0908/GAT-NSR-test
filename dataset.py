@@ -2,9 +2,9 @@ import torch
 from torch.utils.data import Dataset
 import os
 
-class FilmTrustDataset(Dataset):
+class SocialRecDataset(Dataset):
     """
-    Dataset đơn giản để load FilmTrust.
+    Dataset tổng quát cho các bài toán Social Recommendation (như FilmTrust, Epinions).
     Chỉ làm nhiệm vụ: Đọc file -> Tạo ID -> Chuyển thành Tensor.
     """
     def __init__(self, data_dir):

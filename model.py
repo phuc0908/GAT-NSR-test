@@ -6,13 +6,13 @@ class GATNSR(nn.Module):
     """
     Mô hình GAT-NSR phiên bản Đơn Giản & Dễ Hiểu.
     """
-    def __init__(self, num_users, num_items, feature_dim=32):
+    def __init__(self, num_users, num_items, feature_dim=64):  # Paper: embedding_dim = 64
         super(GATNSR, self).__init__()
         
-        # 1. Tạo các vector đại diện (Embedding)
+        # 1. Initial Embedding
         self.user_embedding = nn.Embedding(num_users, feature_dim)
         self.item_embedding = nn.Embedding(num_items, feature_dim)
-        self.rating_embedding = nn.Embedding(10, feature_dim) # Điểm số 0..9 (tượng trưng 0.5..5.0)
+        self.rating_embedding = nn.Embedding(8, feature_dim)  # FilmTrust: 0.5-4.0 (8 mức)
 
         # 2. Các lớp Attention (GAT)
         # Lớp nhìn vào bạn bè (Social)
@@ -28,12 +28,29 @@ class GATNSR(nn.Module):
         self.user_fusion = nn.Linear(2 * feature_dim, feature_dim)
         self.item_fusion = nn.Linear(2 * feature_dim, feature_dim)
         
-        # 4. Bộ dự đoán (Prediction MLP)
+        # 4. Bộ dự đoán (Prediction MLP) - Paper: 3 hidden layers
         self.predict_layer = nn.Sequential(
-            nn.Linear(2 * feature_dim, 32),
+            nn.Linear(3 * feature_dim, 128),  # Layer 1
             nn.ReLU(),
-            nn.Linear(32, 1)
+            nn.Linear(128, 64),                # Layer 2
+            nn.ReLU(),
+            nn.Linear(64, 32),                 # Layer 3
+            nn.ReLU(),
+            nn.Linear(32, 1)                   # Output layer
         )
+        
+        # Gaussian Initialization (Paper: mean=0, std=0.1)
+        self._init_weights()
+    
+    def _init_weights(self):
+        """Khởi tạo trọng số theo phân phối Gaussian (mean=0, std=0.1)"""
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, mean=0.0, std=0.1)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0.0)
+            elif isinstance(m, nn.Embedding):
+                nn.init.normal_(m.weight, mean=0.0, std=0.1)
 
     def forward(self, user_ids, item_ids, social_adj, interact_adj, interact_ratings):
         """
@@ -47,8 +64,9 @@ class GATNSR(nn.Module):
         u_vectors = self.user_embedding(all_u_ids)
         i_vectors = self.item_embedding(all_i_ids)
         
-        # Rating
-        r_indices = (interact_ratings * 2 - 1).long().clamp(0, 9)
+        # Rating: Map từ [0.5, 1.0, ..., 4.0] → [0, 1, ..., 7]
+        # Công thức: (rating * 2 - 1) chuyển 0.5 → 0, 1.0→1, ..., 4.0→7
+        r_indices = (interact_ratings * 2 - 1).long().clamp(0, 7) 
         r_vectors = self.rating_embedding(r_indices)
         
         # Bước 2: Học Vector User (User Modeling)
@@ -70,7 +88,7 @@ class GATNSR(nn.Module):
         )
         
         # C. Tổng hợp
-        # Giờ cả 2 vector đều có kích thước [Num_Users, Dim]. Ghép vô tư.
+        # 2 vector đều có kích thước [Num_Users, Dim]. Ghép vô tư. HDPE thì ...
         u_cat = torch.cat([user_social_vector, user_history_vector], dim=1)
         final_user_vector = torch.relu(self.user_fusion(u_cat))
         
@@ -92,11 +110,14 @@ class GATNSR(nn.Module):
         final_item_vector = torch.relu(self.item_fusion(i_cat))
         
         
-        # Bước 4: Dự đoán
+        # Bước 4: Dự đoán (Collaboration Layer - Hình 2 Công thức 15)
         batch_u = final_user_vector[user_ids]
         batch_i = final_item_vector[item_ids]
         
-        cat_prediction = torch.cat([batch_u, batch_i], dim=1)
+        # Công thức (15): X_ij = [h_i, h_j, h_i * h_j]
+        element_wise = batch_u * batch_i
+        cat_prediction = torch.cat([batch_u, batch_i, element_wise], dim=1)
+        
         score = self.predict_layer(cat_prediction)
         
         return score.view(-1)

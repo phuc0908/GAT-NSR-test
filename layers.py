@@ -12,7 +12,7 @@ class GraphAttentionLayer(nn.Module):
         # W: Biến đổi đặc trưng Nguồn (Source)
         self.W_src = nn.Linear(feature_dim, feature_dim, bias=False)
         
-        # W: Biến đổi đặc trưng Đích (Target) - nếu khác nguồn
+        # W: Biến đổi đặc trưng Đích (Target)
         self.W_dst = nn.Linear(feature_dim, feature_dim, bias=False)
         
         # W_rating: Biến đổi đặc trưng Rating
@@ -56,17 +56,15 @@ class GraphAttentionLayer(nn.Module):
             # Thông tin truyền đi (Message)
             message = h_src + h_rating
         else:
-            # Nếu không có rating, ghép zero padding cho phần rating để khớp kích thước mô hình
-            # Hoặc đơn giản là dùng cơ chế riêng. Để code gọn, ta giả định luôn có khớp dimensions
-            # Ở đây tạo tensor 0 để thế chỗ rating
             zeros = torch.zeros_like(h_src)
             a_input = torch.cat([h_src, h_dst, zeros], dim=1)
             message = h_src
 
+        # Hàm f(.) Tính điểm Attention (2)(4)(7)
         scores = self.leakyrelu(self.a(a_input))
         attention = torch.exp(scores)
         
-        # 4. Tổng hợp (Aggregation)
+        # 4. Tổng hợp (Aggregation) (5)(9)
         weighted_message = message * attention
         
         # Tạo vector kết quả với kích thước bằng số nút ĐÍCH (User)
@@ -75,7 +73,7 @@ class GraphAttentionLayer(nn.Module):
         # Cộng dồn vào đích
         h_new.scatter_add_(0, dst_idx.unsqueeze(1).expand(-1, h_new.size(1)), weighted_message)
         
-        # Chuẩn hóa (Softmax partition)
+        # Chuẩn hóa (Softmax partition) (3)(8)
         sum_weight = torch.zeros(N_target, 1).to(source_vecs.device)
         sum_weight.scatter_add_(0, dst_idx.unsqueeze(1), attention)
         
